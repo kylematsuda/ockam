@@ -163,7 +163,7 @@ impl Stream {
     ///
     /// Streams that do not already exists will be created, and
     /// existing stream identifiers will automatically be re-used.
-    pub async fn connect<'a, R, TX, RX>(
+    pub async fn connect<R, TX, RX>(
         &self,
         peer: R,
         tx_name: TX,
