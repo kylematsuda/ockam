@@ -16,7 +16,7 @@ pub struct StreamProducer {
     parser: ProtocolParser<Self>,
     outbox: VecDeque<ProtocolPayload>,
     ids: Monotonic,
-    tx_name: String,
+    tx_name: Option<String>,
     peer: Route,
     stream_service: String,
     /// Keep track of whether this producer has been initialised
@@ -36,7 +36,7 @@ fn parse_response(w: &mut StreamProducer, ctx: &mut Context, resp: Routed<Respon
             w.init = true;
 
             info!(
-                "Initialised consumer for stream '{}' and route: {}",
+                "Initialised producer for stream '{}' and route: {}",
                 stream_name, w.peer
             );
 
@@ -78,7 +78,7 @@ impl Worker for StreamProducer {
     async fn initialize(&mut self, ctx: &mut Self::Context) -> Result<()> {
         self.parser.attach(ResponseParser::new(parse_response));
 
-        debug!("Create producer stream: {}", self.tx_name);
+        debug!("Create producer stream: {:?}", self.tx_name);
 
         // Create a stream for this sender
         ctx.send(
@@ -86,7 +86,7 @@ impl Worker for StreamProducer {
                 .clone()
                 .modify()
                 .append(self.stream_service.clone()),
-            CreateStreamRequest::new(Some(self.tx_name.clone())),
+            CreateStreamRequest::new(self.tx_name.clone()),
         )
         .await
     }
@@ -103,7 +103,7 @@ impl Worker for StreamProducer {
 
         if self.init {
             debug!(
-                "Sending PushRequest for incoming message to stream {}",
+                "Sending PushRequest for incoming message to stream {:?}",
                 self.tx_name
             );
             ctx.send(self.peer.clone(), proto_msg).await?;
@@ -120,7 +120,7 @@ impl StreamProducer {
     /// When creating a StreamProducer we don't initialise the route
     /// because this will be filled in by the stream consumer which
     /// registers the stream
-    pub(crate) fn new(tx_name: String, peer: Route, stream_service: String) -> Self {
+    pub(crate) fn new(tx_name: Option<String>, peer: Route, stream_service: String) -> Self {
         Self {
             parser: ProtocolParser::new(),
             ids: Monotonic::new(),

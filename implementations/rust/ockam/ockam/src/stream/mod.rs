@@ -163,15 +163,16 @@ impl Stream {
     ///
     /// Streams that do not already exists will be created, and
     /// existing stream identifiers will automatically be re-used.
-    pub async fn connect<R, S>(
+    pub async fn connect<'a, R, TX, RX>(
         &self,
         peer: R,
-        tx_name: S,
-        rx_name: S,
+        tx_name: TX,
+        rx_name: RX
     ) -> Result<(SenderAddress, ReceiverAddress)>
     where
         R: Into<Route>,
-        S: Into<String>,
+        TX: Into<Option<String>>,
+        RX: Into<Option<String>>,
     {
         let peer = peer.into();
         let tx_name = tx_name.into();
@@ -219,11 +220,10 @@ impl Stream {
             .await?;
 
         // Return a sender and receiver address
-        Ok((
-            SenderAddress { inner: tx },
+        Ok((SenderAddress { inner: tx },
             ReceiverAddress {
-                inner: rx,
                 ctx: self.ctx.new_context(rx_rx).await?,
+                inner: rx,
             },
         ))
     }

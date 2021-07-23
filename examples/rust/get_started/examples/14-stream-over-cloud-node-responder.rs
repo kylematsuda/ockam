@@ -1,9 +1,12 @@
-use ockam::{stream::Stream, Context, Result, Route, TcpTransport, TCP};
+use ockam::{route, stream::Stream, Context, Result, TcpTransport, TCP};
 use ockam_get_started::Echoer;
 use std::time::Duration;
 
 #[ockam::node]
 async fn main(ctx: Context) -> Result<()> {
+    let tx_name = std::env::var("TX").ok();
+    let rx_name = std::env::var("RX").ok();
+
     let tcp = TcpTransport::create(&ctx).await?;
     tcp.connect("127.0.0.1:4000").await?;
 
@@ -14,12 +17,13 @@ async fn main(ctx: Context) -> Result<()> {
     Stream::new(&ctx)?
         .with_interval(Duration::from_millis(100))
         .connect(
-            Route::new().append_t(TCP, "127.0.0.1:4000"),
+            route![(TCP, "127.0.0.1:4000")],
             // Stream name from THIS to OTHER
-            "test-b-a",
+            tx_name,
             // Stream name from OTHER to THIS
-            "test-a-b",
+            rx_name,
         )
         .await?;
+
     Ok(())
 }

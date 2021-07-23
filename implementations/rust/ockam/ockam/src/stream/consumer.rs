@@ -28,7 +28,7 @@ pub struct StreamConsumer {
     /// Producer address
     prod: Option<Address>,
     /// Receiving stream name
-    stream: String,
+    stream: Option<String>,
     /// Fetch interval
     interval: Duration,
     /// ReceiverAddress address
@@ -47,7 +47,7 @@ fn parse_response(w: &mut StreamConsumer, ctx: &mut Context, resp: Routed<Respon
                 stream_name, return_route
             );
 
-            assert_eq!(w.stream, stream_name);
+            w.stream = Some(stream_name.clone());
             w.stream_peer = return_route.clone();
 
             // Next up we get the current index
@@ -106,12 +106,12 @@ fn parse_response(w: &mut StreamConsumer, ctx: &mut Context, resp: Routed<Respon
                 // Either forward to the next hop, or to the consumer address
                 let res = match trans.onward_route.next() {
                     Ok(addr) => {
-                        info!("Forwarding {} message to addr: {}", w.stream, addr);
+                        info!("Forwarding {:?} message to addr: {}", w.stream, addr);
                         let local_msg = LocalMessage::new(trans, Vec::new());
                         block_future(&ctx.runtime(), async { ctx.forward(local_msg).await })
                     }
                     Err(_) => {
-                        info!("Forwarding {} message to rx.next()", w.stream);
+                        info!("Forwarding {:?} message to rx.next()", w.stream);
                         block_future(&ctx.runtime(), async {
                             ctx.send(w.rx_rx.clone(), msg).await
                         })
@@ -129,9 +129,10 @@ fn parse_response(w: &mut StreamConsumer, ctx: &mut Context, resp: Routed<Respon
             // If the index was updated, save it
             if last_idx != w.idx {
                 block_future(&ctx.runtime(), async {
+                    let stream_name = w.stream.as_mut().unwrap(); // TODO
                     ctx.send(
                         w.index_peer.clone(),
-                        IndexReq::save(w.stream.clone(), w.client_id.clone(), w.idx),
+                        IndexReq::save(stream_name.clone(), w.client_id.clone(), w.idx),
                     )
                     .await
                 });
@@ -230,7 +231,7 @@ impl StreamConsumer {
         client_id: String,
         remote: Route,
         prod: Option<Address>,
-        stream: String,
+        stream: Option<String>,
         interval: Duration,
         fwd: Option<Address>,
         rx_rx: Address,
