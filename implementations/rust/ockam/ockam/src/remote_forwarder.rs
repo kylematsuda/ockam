@@ -1,7 +1,6 @@
 #![deny(missing_docs)]
 
 use crate::{Context, OckamError};
-use ockam_core::lib::net::SocketAddr;
 use ockam_core::{Address, Any, LocalMessage, Result, Route, Routed, TransportMessage, Worker};
 use rand::random;
 use serde::{Deserialize, Serialize};
@@ -38,9 +37,9 @@ pub struct RemoteForwarder {
 }
 
 impl RemoteForwarder {
-    fn new(hub_route: Route, destination: Address, callback_address: Address) -> Self {
-        let route = hub_route.append("forwarding_service").into();
-        let destination = Route::new().append(destination).into();
+    fn new(mut hub_route: Route, destination: Address, callback_address: Address) -> Self {
+        let route: Route = hub_route.modify().append("forwarding_service").into();
+        let destination: Route = destination.into();
         Self {
             route,
             destination,
@@ -57,7 +56,7 @@ impl RemoteForwarder {
     ) -> Result<RemoteForwarderInfo> {
         let address: Address = random();
         let mut child_ctx = ctx.new_context(address).await?;
-        let forwarder = Self::new(hub_route, destination.into(), child_ctx.address());
+        let forwarder = Self::new(hub_route.into(), destination.into(), child_ctx.address());
 
         let worker_address: Address = random();
         debug!("Starting RemoteForwarder at {}", &worker_address);
