@@ -33,28 +33,40 @@ Or you can create your personal node by going to: https://hub.ockam.network
 
 ## Rust client application
 
+### Project setup
+
+Assuming you have [cargo](https://www.rust-lang.org/tools/install) installed
+
+```
+cargo new --lib ockam_get_started
+
+cd ockam_get_started
+
+echo 'ockam = { version = "0", features = ["ockam_transport_tcp", "ockam_vault"] }' >> Cargo.toml
+
+mkdir examples
+```
+
+
 The Alice node is going to establish a Secure Channel with the Bob node.
 
 For that, the Bob node needs to register with the Hub Node first and get a Forwarding Address for Alice to access it.
 
 Let's create Bob code:
 
-**TODO 1-pager project setup**
-
 ```
-touch bob.rs
+touch examples/bob.rs
 ```
 
 
 ```rust
-
 use ockam::{
-    Context, Entity, NoOpTrustPolicy, RemoteForwarder, Result, SecureChannels, TcpTransport, Vault,
+    route, Context, Entity, NoOpTrustPolicy, RemoteForwarder, Result, SecureChannels, TcpTransport,
+    Vault, TCP,
 };
-use ockam_get_started::Echoer;
 
 #[ockam::node]
-async fn main(ctx: Context) -> Result<()> {
+async fn main(mut ctx: Context) -> Result<()> {
     // Using a shared Hub Node.
     // You can create a personal node by going to https://hub.ockam.network
     let cloud_node_tcp_address = "54.151.52.111:4000";
@@ -62,32 +74,32 @@ async fn main(ctx: Context) -> Result<()> {
     // Initialize the TCP Transport.
     let tcp = TcpTransport::create(&ctx).await?;
 
-    // Create a TCP connection to your cloud node.
-    tcp.connect(cloud_node_tcp_address).await?;
-
-    // Create an echoer worker
-    ctx.start_worker("echoer", Echoer).await?;
     let vault = Vault::create(&ctx).expect("failed to create vault");
     let mut bob = Entity::create(&ctx, &vault)?;
 
     // Create a secure channel listener at address "bob_secure_channel_listener"
     bob.create_secure_channel_listener("bob_secure_channel_listener", NoOpTrustPolicy)?;
 
-    let forwarder =
-        RemoteForwarder::create(&ctx, route![(TCP, cloud_node_tcp_address)], "bob_secure_channel_listener")
-            .await?;
+    let forwarder = RemoteForwarder::create(
+        &ctx,
+        route![(TCP, cloud_node_tcp_address)],
+        "bob_secure_channel_listener",
+    )
+    .await?;
 
     println!("Forwarding address: {}", forwarder.remote_address());
 
+    let message = ctx.receive::<String>().await?;
+    println!("Bob Received: {} from Alice via secure channel", message); // should print "Hello Ockam!"
+
     Ok(())
 }
-
 ```
 
 You should start the Bob in order to get the Forwarding Address:
 
 ```
-cargo run bob
+cargo run --example bob
 ```
 
 You would see some logs, including `Forwarding address: ...` - this address you should use when running Alice
@@ -95,7 +107,7 @@ You would see some logs, including `Forwarding address: ...` - this address you 
 Now create the Alice code:
 
 ```
-touch alice.rs
+touch examples/alice.rs
 ```
 
 ```rust
@@ -110,42 +122,28 @@ async fn main(mut ctx: Context) -> Result<()> {
     // You can create a personal node by going to https://hub.ockam.network
     let cloud_node_tcp_address = "54.151.52.111:4000";
 
-    let secure_channel_listener_forwarding_address =
-        "<Paste the forwarding address of Bob here>";
+    let forwarding_address = "<Paste the forwarding address of Bob here>";
 
     // Initialize the TCP Transport.
     let tcp = TcpTransport::create(&ctx).await?;
 
-    // Create a TCP connection to your cloud node.
-    tcp.connect(cloud_node_tcp_address).await?;
-
     let vault = Vault::create(&ctx).expect("failed to create vault");
     let mut alice = Entity::create(&ctx, &vault)?;
-    let cloud_node_address: Address = (TCP, cloud_node_tcp_address).into();
-    let cloud_node_route = route![
-        cloud_node_address,
-        secure_channel_listener_forwarding_address
-    ];
 
+    let cloud_node_route = route![(TCP, cloud_node_tcp_address), forwarding_address];
     let channel = alice.create_secure_channel(cloud_node_route, NoOpTrustPolicy)?;
 
-    let echoer_route = route![channel, "echoer"];
+    ctx.send(route![channel, "app"], "Hello world!".to_string())
+        .await?;
 
-    ctx.send(echoer_route, "Hello world!".to_string()).await?;
-
-    // Wait to receive a reply and print it.
-    let reply = ctx.receive::<String>().await?;
-    println!("App Received: {}", reply); // should print "Hello Ockam!"
-
-    // Stop all workers, stop the node, cleanup and return.
-    ctx.stop().await
+    Ok(())
 }
 ```
 
 and run the Alice code:
 
 ```
-cargo run alice
+cargo run --example alice
 ```
 
 You should see the log message: `App Received: Hello world`
