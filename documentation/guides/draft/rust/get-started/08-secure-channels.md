@@ -1,19 +1,33 @@
 # Step 4 - Secure Channels
 
-Secure channels are encrypted bi-directional message routes between two entities. One entity acts as a listener in the secure channel protocol, and the other is the initiator.
+Secure channels are encrypted bi-directional message routes between two
+entities. One entity acts as a listener in the secure channel protocol, and the
+other is the initiator.
 
-When a secure channel listener receives a request to start a new channel, it checks a trust policy to ensure the initiating entity is allowed to connect. In particular, an `IdentifierTrustPolicy` is used, which specifies a set of permitted profile identifiers.
+When a secure channel listener receives a request to start a new channel, it
+checks a trust policy to ensure the initiating entity is allowed to connect. In
+particular, an `IdentifierTrustPolicy` is used, which specifies a set of
+permitted profile identifiers.
 
-The secure channel creation protocol also verifies that the entity presenting a profile identifier actually has possession of the keypair for that identifier.
+The secure channel creation protocol also verifies that the entity presenting a
+profile identifier actually has possession of the keypair for that identifier.
 
-The entities then run the key agreement protocol, which allows both entities to securely agree upon a secret key without exchanging it over the network. The algorithm used for key agreement is pluggable. By default, an implementation of the Noise XX protocol is used. The Signal X3DH protocol is also available as a crate add-on.
+The entities then run the key agreement protocol, which allows both entities to
+securely agree upon a secret key without exchanging it over the network. The
+algorithm used for key agreement is pluggable. By default, an implementation of
+the Noise XX protocol is used. The Signal X3DH protocol is also available as a
+crate add-on.
 
-After the key agreement is done, the initiating entity starts a worker to manage the secure channel. The address of this worker is used to send messages through the channel. This address is included in routes just like transport and other worker addresses.
+After the key agreement is done, the initiating entity starts a worker to
+manage the secure channel. The address of this worker is used to send messages
+through the channel. This address is included in routes just like transport and
+other worker addresses.
 
 
 ## Creating a Secure Channel
 
-Entities create a secure channel by calling `Entity::create_secure_channel_listener` on the listening peer, and `Entity::create_secure_channel` on the initiating peer.
+Entities create a secure channel by calling `create_secure_channel_listener` on
+the listening peer, and `Entity::create_secure_channel` on the initiating peer.
 
 Creating the listener requires two parameters:
 - The address of the secure channel being established
@@ -26,7 +40,8 @@ Creating the initiator also requires two parameters:
 
 ## Example: Echoer through Secure Channel
 
-In this example, Alice creates a secure channel with Bob. Alice and Bob are on different nodes, and use the TCP transport to route messages.
+In this example, Alice creates a secure channel with Bob. Alice and Bob are on
+different nodes, and use the TCP transport to route messages.
 
 
 ### Example: Bob (Listener)
