@@ -4,13 +4,13 @@
 
 In the world of connected devices data often is transferred in plain text.
 
-Devices cannot connect to each other directly because they are not exposed to the internet over a public hostname or IP address.
-
-Devices have to rely on cloud services to forward communication and facilitate discovery.
-
 Most existing network security mechanism (like TLS) only secure communication between a device and the host it's connecting to, leaving the message exposed to all intermediate services.
 
 A solution to that is End-to-end encryption.
+
+Devices often cannot connect to each other directly because they are not exposed to the internet over a public hostname or IP address.
+
+Devices have to rely on cloud services to forward communication and facilitate discovery.
 
 Ockam provides Secure Channels tool to establish end-to-end encrypted communication across arbitrary number of network steps
 
